@@ -75,6 +75,7 @@ function build(stage){
 }
 function faces(boxes,project,view){
  const out=[],spec=[{n:[0,1,0],v:[[0,1,0],[0,1,1],[1,1,1],[1,1,0]],k:1.06},{n:[1,0,0],v:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]],k:.84},{n:[-1,0,0],v:[[0,0,0],[0,0,1],[0,1,1],[0,1,0]],k:.73},{n:[0,0,1],v:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]],k:.91},{n:[0,0,-1],v:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]],k:.77}];
+ spec.push({n:[0,-1,0],v:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]],k:.65});
  for(const b of boxes)for(const f of spec){if(f.n.reduce((a,v,i)=>a+v*view[i],0)<=0)continue;const poly=f.v.map(v=>project(b.x+v[0]*b.w,b.y+v[1]*b.h,b.z+v[2]*b.d));out.push({poly,d:project(b.x+b.w/2,b.y+b.h/2,b.z+b.d/2).d,color:shade(b.color,f.k)});}
  return out.sort((a,b)=>a.d-b.d);
 }

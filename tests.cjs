@@ -1,4 +1,5 @@
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),E=require('./dist/engine.js');
+// Preserve the existing v1/v2 physical contract for saved games. v3 has materials-tests.cjs.
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),E=require('./dist/engine-v2.js');
 let passed=0;function test(name,fn){fn();console.log('PASS',name);passed++;}const count=s=>s.grid.reduce((a,b)=>a+b,0);
 test('Same seed reproduces terrain and flag',()=>assert.equal(E.encode(E.create('a')),E.encode(E.create('a'))));
 test('100 initial seeds stand without collapse',()=>{for(let i=0;i<100;i++){let s=E.create('test'+i);assert.equal(E.flagPlan(s).fall,false);assert.equal(E.settle(s).moved,0);}});

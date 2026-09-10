@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),zlib=require('node:zlib');
-const E=require('./dist/engine'),C=require('./dist/content'),app=require('./test-ui.cjs');
+// v2 simulation regression plus the live v3 browser controller; new physics tested separately.
+const E=require('./dist/engine-v2'),C=require('./dist/content'),app=require('./test-ui.cjs');
 let passed=0;function test(name,fn){fn();passed++;console.log('PASS',name);}
 test('Custom time accepts seconds, fractional minutes, hours and unlimited',()=>{
  assert.equal(E.seconds('77',1),77);assert.equal(E.seconds('1.25',60),75);assert.equal(E.seconds('2.5',3600),9000);assert.equal(E.seconds('0',60),0);assert.equal(E.create('custom',12345,4567).turnDuration,4567);
@@ -28,7 +29,7 @@ const legacyRaw=zlib.gunzipSync(Buffer.from(fs.readFileSync(__dirname+'/fixtures
 test('Actual v1 snapshot migrates without changing terrain, scores or physical rules',()=>{
  const old=JSON.parse(legacyRaw),s=E.decode(legacyRaw);assert.equal(s.version,2);assert.equal(s.physics,'sand-voxel-1');assert.deepEqual(Array.from(s.grid),old.grid);assert.deepEqual(s.scores,old.scores);assert.deepEqual(s.turns,old.turns);assert.equal(s.player,old.player);assert.equal(s.flag.angle,old.flag.angle);assert.equal(s.flag.root,old.flag.root);assert.equal(s.stage,'beach');
 });
-test('Migration leaves original v1 bytes intact and writes only v2 save',()=>{const a=app(legacyRaw,false,true);a.frame(16000);assert.equal(a.storage.get('sand-digger.save.v1'),legacyRaw);assert(a.storage.has('sand-digger.save.v2'));assert.equal(a.get().version,2);});
+test('Migration leaves original v1 bytes intact and writes current save key with old physics',()=>{const a=app(legacyRaw,false,true);a.frame(16000);assert.equal(a.storage.get('sand-digger.save.v1'),legacyRaw);assert(a.storage.has('sand-digger.save.v3'));assert.equal(a.get().version,2);});
 test('Malformed v2 stage, dimensions and future schema fail before application',()=>{
  const raw=JSON.parse(E.encode(E.create()));for(const bad of[{...raw,version:99},{...raw,stage:'broken'},{...raw,flag:{...raw.flag,diameter:-2}},{...raw,flag:{...raw.flag,color:'url(javascript:bad)'}}])assert.throws(()=>E.decode(JSON.stringify(bad)));
 });
