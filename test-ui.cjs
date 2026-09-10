@@ -10,13 +10,13 @@ module.exports=function app(saved,failWrites=false,legacy=false,viewport={width:
  const buttons=Object.keys(E.TOOLS).map(t=>{const b=el(t);b.dataset.tool=t;return b;});
  const doc={hidden:false,getElementById:el,createElement:type=>el(type+'-'+(++canvasCount)),querySelectorAll:()=>buttons,querySelector:()=>Object.values(elems).find(e=>e.open),addEventListener:(k,f)=>events[k]=f,modelContext:{registerTool:t=>registered.push(t)}};
  const box={SandEngine:E,SandContent:C,document:doc,performance:{now:()=>now},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>{if(failWrites)throw Error('Disk full');storage.set(k,v);}},console:{log(){},warn(){},error(){},debug(){}},window:{addEventListener:(k,f)=>windowEvents[k]=f},ResizeObserver:class{constructor(f){this.f=f;}observe(){this.f();}},devicePixelRatio:1,requestAnimationFrame:f=>raf=f,setTimeout:()=>{},AbortController,Math,Uint8Array,crypto:{randomUUID:()=>('variant-'+canvasCount+'-'+now)}};
- vm.createContext(box);for(const file of['world.js','audio.js','renderer.js','game.js'])vm.runInContext(fs.readFileSync(__dirname+'/dist/'+file,'utf8'),box);
+ vm.createContext(box);for(const file of['world.js','audio.js','renderer.js','feedback.js','game.js'])vm.runInContext(fs.readFileSync(__dirname+'/dist/'+file,'utf8'),box);
  return{el,storage,registered,box,doc,buttons,events,windowEvents,
   read(){return registered.find(t=>t.name==='read_sand_match').execute();},
   choose(tool){return registered.find(t=>t.name==='select_sand_tool').execute({tool});},
   frame(ms=17){now+=ms;raf(now);},advance(ms,step=20){for(let i=0;i<ms;i+=step){now+=Math.min(step,ms-i);raf(now);}},
   pointer(type,x=450,y=350,extra={}){el('game').listeners[type]({clientX:x,clientY:y,pointerId:1,button:0,pointerType:'mouse',...extra});},
   get(){return E.decode(storage.get('sand-digger.save.v3')||storage.get('sand-digger.save.v2')||storage.get('sand-digger.save.v1'));},
-  submit({duration='77',turn='13',stage='random',seed='test-setting',unit='1',turnUnit='1',pilePercent=100,sediment='sand',time='cycle',season='cycle',weather='auto'}={}){el('duration').value=duration;el('durationUnit').value=unit;el('turnDuration').value=turn;el('turnUnit').value=turnUnit;el('stageSelect').value=stage;el('seedInput').value=seed;el('pilePercent').value=String(pilePercent);el('sedimentSelect').value=sediment;el('timeSelect').value=time;el('seasonSelect').value=season;el('weatherSelect').value=weather;el('setupForm').onsubmit({preventDefault(){}});}
+  submit({duration='77',turn='13',stage='random',seed='test-setting',unit='1',turnUnit='1',pilePercent=100,sediment='sand',time='cycle',season='cycle',weather='auto',materialPhysics=true}={}){el('materialPhysics').checked=materialPhysics;el('duration').value=duration;el('durationUnit').value=unit;el('turnDuration').value=turn;el('turnUnit').value=turnUnit;el('stageSelect').value=stage;el('seedInput').value=seed;el('pilePercent').value=String(pilePercent);el('sedimentSelect').value=sediment;el('timeSelect').value=time;el('seasonSelect').value=season;el('weatherSelect').value=weather;el('setupForm').onsubmit({preventDefault(){}});}
  };
 };

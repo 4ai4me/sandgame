@@ -1,6 +1,16 @@
 /* Twelve original looping arrangements; no downloaded recordings. */
 (function(root){'use strict';
 const C=typeof module!=='undefined'&&module.exports?require('./content.js'):root.SandContent;
+const DIG_PROFILES={
+ sand:{filter:'highpass',frequency:1500,length:.10,gain:.12,pitch:43,type:'triangle',taps:1},
+ 'fine-sand':{filter:'highpass',frequency:3200,length:.14,gain:.09,pitch:57,type:'sine',taps:1},
+ 'wet-sand':{filter:'lowpass',frequency:700,length:.16,gain:.18,pitch:32,type:'triangle',taps:1},
+ gravel:{filter:'bandpass',frequency:2200,length:.06,gain:.21,pitch:66,type:'square',taps:3},
+ silt:{filter:'bandpass',frequency:1900,length:.12,gain:.10,pitch:49,type:'triangle',taps:2},
+ loam:{filter:'lowpass',frequency:1100,length:.13,gain:.16,pitch:38,type:'triangle',taps:2},
+ clay:{filter:'lowpass',frequency:450,length:.20,gain:.19,pitch:28,type:'sine',taps:1},
+ 'wet-clay':{filter:'lowpass',frequency:300,length:.24,gain:.22,pitch:24,type:'sine',taps:2}
+};
 class SandAudio {
  constructor(){this.context=null;this.master=null;this.musicGain=null;this.fxGain=null;this.enabled=true;this.fx=true;this.volume=.3;this.track=null;this.step=0;this.next=0;this.nodes=new Set();}
  unlock(){
@@ -34,11 +44,23 @@ class SandAudio {
    this.step++;this.next+=stepTime;
   }
  }
- effect(kind){if(!this.fx||!this.context)return;const now=this.context.currentTime;
-  if(kind==='dig')this.note(42+(this.step%5),now,.07,.08,'triangle',true);
+ noise(profile,time,gain){
+  const a=this.context;if(!a?.createBuffer||!a.createBufferSource||!a.createBiquadFilter||this.nodes.size>=80)return;
+  const length=Math.ceil(a.sampleRate*profile.length),buffer=a.createBuffer(1,length,a.sampleRate),data=buffer.getChannelData(0);
+  for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*(1-i/length);
+  const source=a.createBufferSource(),filter=a.createBiquadFilter(),volume=a.createGain();source.buffer=buffer;filter.type=profile.filter;filter.frequency.value=profile.frequency;filter.Q.value=.65;
+  volume.gain.setValueAtTime(.0001,time);volume.gain.exponentialRampToValueAtTime(gain,time+.008);volume.gain.exponentialRampToValueAtTime(.0001,time+profile.length);
+  source.connect(filter);filter.connect(volume);volume.connect(this.fxGain);this.nodes.add(source);source.onended=()=>{this.nodes.delete(source);source.disconnect();filter.disconnect();volume.disconnect();};source.start(time);source.stop(time+profile.length+.01);
+ }
+ effect(kind,material='sand',tool='finger'){if(!this.fx||!this.context)return;const now=this.context.currentTime;
+  if(kind==='dig'){const p=DIG_PROFILES[material]||DIG_PROFILES.sand,scale=tool==='needle'?.3:tool==='toothpick'?.45:tool==='bothhands'?1.15:1;
+   for(let i=0;i<p.taps;i++)this.noise(p,now+i*.025,p.gain*scale/p.taps);
+   this.note(p.pitch,now,p.length,p.gain*.32*scale,p.type,true);
+  }
   else if(kind==='fall'){this.note(29,now,.65,.45,'triangle',true);this.note(34,now,.8,.2,'sine',true);}
   else{this.note(72,now,.22,.18,'sine',true);this.note(76,now+.12,.3,.15,'sine',true);}
  }
 }
+SandAudio.DIG_PROFILES=DIG_PROFILES;
 if(typeof module!=='undefined'&&module.exports)module.exports=SandAudio;else root.SandAudio=SandAudio;
 })(globalThis);

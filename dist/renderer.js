@@ -15,8 +15,8 @@ class Raster {
   for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++){
    const u=((by-cy)*(x+.5-cx)+(cx-bx)*(y+.5-cy))/area,v=((cy-ay)*(x+.5-cx)+(ax-cx)*(y+.5-cy))/area,w=1-u-v;if(u<-.00001||v<-.00001||w<-.00001)continue;
    const d=u*a.d+v*b.d+w*c.d,i=x+y*this.w;if(d<this.depth[i]-.00001)continue;
-   let col=rgba;if(texture){const tx=Math.max(0,Math.min(texture.width-1,Math.floor((u*a.u+v*b.u+w*c.u)*texture.width))),ty=Math.max(0,Math.min(texture.height-1,Math.floor((u*a.v+v*b.v+w*c.v)*texture.height))),j=(tx+ty*texture.width)*4;col=texture.data.subarray(j,j+4);if(col[3]<128)continue;}
-   this.depth[i]=d;const j=i*4;pixels[j]=col[0];pixels[j+1]=col[1];pixels[j+2]=col[2];pixels[j+3]=255;
+   let red=rgba[0],green=rgba[1],blue=rgba[2];if(texture){const tx=Math.max(0,Math.min(texture.width-1,Math.floor((u*a.u+v*b.u+w*c.u)*texture.width))),ty=Math.max(0,Math.min(texture.height-1,Math.floor((u*a.v+v*b.v+w*c.v)*texture.height))),j=(tx+ty*texture.width)*4;if(texture.data[j+3]<128)continue;const shade=texture.shade??1;red=texture.data[j]*shade;green=texture.data[j+1]*shade;blue=texture.data[j+2]*shade;}
+   this.depth[i]=d;const j=i*4;pixels[j]=red;pixels[j+1]=green;pixels[j+2]=blue;pixels[j+3]=255;
   }
  }
  polygon(poly,fill,texture){for(let i=1;i<poly.length-1;i++)this.triangle(poly[0],poly[i],poly[i+1],fill,texture);}

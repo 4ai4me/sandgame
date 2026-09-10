@@ -7,7 +7,7 @@ const is3=s=>s.physics===PHYSICS,valid=(x,a,b)=>typeof x==='number'&&Number.isFi
 const material=s=>M.find(m=>m.id===s.sediment)||M[0],factor=s=>Math.cbrt((s.pilePercent||100)/100);
 const amount=(s,i)=>s.grid[i]?(is3(s)?s.fill[i]:10):0;
 const mass=s=>s.grid.reduce((a,v,i)=>a+(v?amount(s,i):0),0)/10;
-const unitMass=s=>Math.round(70000*(s.pilePercent/100)*material(s).density);
+const unitMass=s=>Math.round(70000*(s.pilePercent/100)*(s.materialPhysics===false?1:material(s).density));
 const grams=(s,score)=>score/(is3(s)?1e6:10);
 const harvestGrams=(s,n)=>is3(s)?Math.round(n*10)*unitMass(s)/1e6:n*.7;
 function environment(s){
@@ -17,19 +17,22 @@ function environment(s){
  const daylight=e.time==='cycle'?.5+.5*Math.cos(t*Math.PI/60):e.time==='night'?0:1;
  const wetness=weather==='rain'?Math.min(1,((e.weather==='auto'?t%60:t)+15)/60):material(s).id.startsWith('wet')?.6:0;
  const wind=weather==='wind'?1:weather==='rain'?.48:weather==='snow'?.25:.12;
- return {season,weather,daylight,wetness,wind};
+ const windDirection=(L.hash(s.seed+'|wind')/4294967296)*Math.PI*2+Math.sin(t/37)*.65,windStrength=wind*(.82+.18*Math.sin(t*1.3));
+ return {season,weather,daylight,wetness,wind,windDirection,windStrength};
 }
 function properties(s){
+ if(s.materialPhysics===false)return {...M[0],bridge:2,repose:2,stress:0,shake:0};
  const m=material(s),e=environment(s),saturated=e.wetness>.8&&['silt','clay','wet-clay','loam'].includes(m.id);
  const shake=(s.stage==='ocean-ship'?.65:s.stage==='river-boat'?.3:0);
  return {...m,bridge:Math.max(0,Math.min(5,Math.floor(m.cohesion+m.wetGain*e.wetness-(saturated?2:0)+(e.weather==='snow'?.6:0)))),repose:Math.max(1,m.friction-(saturated?1:0)),stress:e.wind*m.erosion+shake/(m.friction+1),shake};
 }
 function create(seed='SAND-0909',duration=600,turnDuration=45,options={}){
  const percent=options.pilePercent??100,sediment=options.sediment??'sand';
+ if(options.materialPhysics!==undefined&&typeof options.materialPhysics!=='boolean')throw Error('재질 물리 설정이 올바르지 않습니다.');
  if(!Number.isInteger(percent)||!valid(percent,50,1700)||!M.some(m=>m.id===sediment))throw Error('더미 규모는 50~1700의 정수, 재질은 목록에서 선택하세요.');
  const env={elapsed:0,time:options.time??'cycle',season:options.season??'cycle',weather:options.weather??'auto'};
  checkEnvironment(env);
- const s=L.create(seed,duration,turnDuration,options);Object.assign(s,{version:VERSION,physics:PHYSICS,pilePercent:percent,sediment,environment:env,fill:Uint8Array.from(s.grid,v=>v*10)});
+ const s=L.create(seed,duration,turnDuration,options);Object.assign(s,{version:VERSION,physics:PHYSICS,pilePercent:percent,sediment,materialPhysics:options.materialPhysics??true,turnStarted:false,environment:env,fill:Uint8Array.from(s.grid,v=>v*10)});
  // Settle the selected material before embedding a flag, so generation never starts in a collapse.
  settle(s,{initial:true});
  let height=0,peakX=12,peakZ=12;
@@ -119,7 +122,7 @@ function endTurn(s,harvest,ko=false){
  const score=units*unitMass(s),actor=s.player;if(!Number.isSafeInteger(score)||s.scores[0]+s.scores[1]+score>SIZE*10*unitMass(s))throw Error('수확 질량을 초과했습니다.');
  s.scores[actor]+=score;s.turns[actor]++;s.history.push({turn:s.turn,player:actor,grams:score,ko});s.history=s.history.slice(-30);
  if(ko)s.result={winner:1-actor,reason:'ko',actor};else if((s.expired||s.duration>0&&s.remaining<=0)&&s.turns[0]===s.turns[1])s.result=L.weightResult(s);
- else{s.player=1-actor;s.turn++;s.turnRemaining=s.turnDuration;}return s.result;
+ else{s.player=1-actor;s.turn++;s.turnRemaining=s.turnDuration;s.turnStarted=false;}return s.result;
 }
 function checkEnvironment(e){
  if(!e||!valid(e.elapsed,0,1e9)||!['cycle','day','night'].includes(e.time)||!['cycle','spring','summer','autumn','winter'].includes(e.season)||!['auto','clear','rain','snow','wind'].includes(e.weather))throw Error('시간·계절·날씨 설정이 올바르지 않습니다.');
@@ -128,6 +131,7 @@ const encode=s=>JSON.stringify({...s,grid:Array.from(s.grid),...(is3(s)?{fill:Ar
 function decode(raw){
  if(typeof raw!=='string'||raw.length>250000)throw Error('저장 크기가 올바르지 않습니다.');
  const s=JSON.parse(raw);if(s?.version!==VERSION)return L.decode(raw);
+ for(const key of ['materialPhysics','turnStarted'])if(s[key]!==undefined&&typeof s[key]!=='boolean')throw Error('저장된 경기 옵션이 올바르지 않습니다.');
  if(s.physics!==PHYSICS||!Array.isArray(s.fill)||s.fill.length!==SIZE||s.fill.some((v,i)=>!Number.isInteger(v)||v<0||v>10||!!v!==!!s.grid?.[i])||!Number.isInteger(s.pilePercent)||!valid(s.pilePercent,50,1700)||!M.some(m=>m.id===s.sediment)||!valid(s.pileHeight,1,H))throw Error('재질 또는 부분 질량 저장이 손상되었습니다.');
  checkEnvironment(s.environment);
  if(!Array.isArray(s.scores)||s.scores.length!==2||s.scores.some(v=>!Number.isSafeInteger(v)||!valid(v,0,SIZE*10*unitMass(s)))||!valid(s.flag?.initialSupport,.01,2000)||!valid(s.flag?.root,0,H-1)||!Array.isArray(s.history)||s.history.some(h=>!h||!Number.isSafeInteger(h.grams)||h.grams<0))throw Error('저장된 점수 또는 지지 상태가 손상되었습니다.');
