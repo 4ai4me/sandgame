@@ -1,13 +1,83 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f6f3e9"><meta name="description" content="깃발을 쓰러뜨리지 않고 모래를 수확하세요. 로컬 2인 3D 모래 뺏기 게임."><title>모래 뺏기 — Sand Digger</title><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="./"><span class="brand-mark">⚑</span><span>모래 뺏기<small>SAND DIGGER</small></span></a><div class="header-note">작은 모래 언덕, 신중한 한 수.</div><nav><button id="help">게임 방법</button><button id="settings">새 경기</button></nav></header>
-<main><section class="arena"><div class="arena-top"><span class="location">● &nbsp; 바닷가 모래판 <span>LOCAL · 2 PLAYERS</span></span><div class="view-tools"><button id="cut" aria-pressed="false">단면 보기</button><button id="rotate" aria-pressed="false">시점 회전</button><button id="zoomOut" aria-label="축소">−</button><button id="zoomIn" aria-label="확대">＋</button></div></div><canvas id="game" tabindex="0" aria-label="3D 모래 언덕. 마우스 또는 터치로 모래를 드래그하여 수확합니다."></canvas><div class="turn-banner"><span id="turnLabel">플레이어 1의 차례</span><small id="instruction">모래 위를 드래그하고 놓으면 한 수가 끝나요.</small></div><div class="arena-bottom"><span id="seedLabel"></span><span>드래그: 채굴 &nbsp; · &nbsp; 우클릭 / 두 손가락: 회전 &nbsp; · &nbsp; 휠 / 핀치: 확대</span><button id="resetView">시점 초기화</button></div><div id="toast" role="status"></div></section>
-<aside><div class="match-line"><span id="round">ROUND 01</span><strong id="clock">10:00</strong></div><div class="players"><article id="p0" class="player active"><div><span class="player-dot">1</span><span>플레이어 1<small>선공</small></span><span class="active-label">YOUR TURN</span></div><strong><span id="score0">0.0</span><small> g</small></strong></article><article id="p1" class="player"><div><span class="player-dot">2</span><span>플레이어 2<small>후공</small></span><span class="active-label">YOUR TURN</span></div><strong><span id="score1">0.0</span><small> g</small></strong></article></div>
-<section class="status-box"><div><span>깃발 지지 상태</span><strong id="riskLabel">안정적</strong></div><div class="risk-track"><i id="riskBar"></i></div><p id="flagSpec"></p></section>
-<section class="toolbox"><div class="section-label">이번 수의 도구 <span id="turnClock">45초</span></div><div class="tools"><button data-tool="brush"><b>▥</b><span>붓</span><small>얕고 섬세하게</small></button><button data-tool="finger" class="selected"><b>☝</b><span>손가락</span><small>깊고 좁게</small></button><button data-tool="hand"><b>✋</b><span>손</span><small>넓게 한 움큼</small></button></div><p id="toolHint">좁은 굴을 파는 도구. 안쪽 지지대를 주의하세요.</p><div class="budget"><span>남은 채굴량</span><progress id="budget" max="100" value="100"></progress></div></section>
-<button id="pass" class="primary">채굴 없이 턴 넘기기 <span>→</span></button><p class="rule-note">많이 가져가도, 깃발을 쓰러뜨리면 패배!</p><div class="sound"><label><input id="music" type="checkbox"> 배경음악</label><label><input id="sfx" type="checkbox" checked> 효과음</label></div><small id="saveStatus" role="status">이 기기에 턴마다 자동 저장</small></aside></main>
-<footer><span>BE GREEDY. BE GENTLE.</span><span>3D 로컬 2인 · 같은 기기를 번갈아 사용하세요</span></footer>
-<dialog id="setup"><form id="setupForm"><span class="eyebrow">A LITTLE FRIENDLY RIVALRY</span><h1>모래 한 줌의 승부</h1><p>깃발을 지키며 더 많은 모래를 가져가세요.</p><label>경기 시간<select id="duration"><option value="120">2분 · 가볍게</option value="600" selected>10분 · 퀵 매치</option value="1800">30분 · 스탠더드</option value="3600">1시간 · 전략전</option value="21600">6시간 · 장기전</option value="86400">24시간 · 데일리전</option value="0">무제한</option></select></label><label>한 턴의 시간<select id="turnDuration"><option value="30">30초</option value="45" selected>45초</option value="90">90초</option value="0">무제한</option></select></label><label>모래 언덕 시드<input id="seedInput" maxlength="32" value="SAND-0909" required pattern="[A-Za-z0-9가-힣_-]{1,32}"></label><p class="fine">진행 중인 경기는 새 경기를 시작하면 교체됩니다. 브라우저를 닫은 동안은 시간이 멈춥니다.</p><button class="primary" type="submit">새 경기 시작 →</button><button id="resume" type="button">현재 경기로 돌아가기</button></form></dialog>
-<dialog id="helpDialog"><h2>욕심은 조금, 손길은 조심히.</h2><ol><li><b>도구를 선택하세요.</b> 붓은 표면을, 손가락은 내부를, 손은 넓은 부위를 파냅니다.</li><li><b>모래를 누르고 드래그하세요.</b> 놓거나 채굴량이 소진되면 행동이 끝납니다. 제거한 모래는 수확함으로 들어갑니다.</li><li><b>깃발이 멈출 때까지 기다리세요.</b> 붕괴로 떨어진 모래는 점수에 포함되지 않습니다.</li><li><b>기기를 상대에게 넘기세요.</b> 시간 종료 후 같은 수의 턴을 마치고 무게를 비교합니다. 같으면 무승부입니다.</li></ol><p>깃발이 뽑혀 쓰러지거나 바닥·모래에 닿으면 행동한 사람이 패배합니다. 위험 표시만으로 패배하지 않습니다.</p><p>단면 보기는 양쪽 모두 사용할 수 있습니다. 모래 지형은 복셀 기반이며, 실제 모래를 단순화한 규칙으로 움직입니다.</p><button id="closeHelp" class="primary">알겠어요</button></dialog>
-<dialog id="result"><span class="eyebrow">THE SAND HAS SETTLED</span><h1 id="resultTitle"></h1><p id="resultReason"></p><div id="resultScores"></div><button id="replay" class="primary">같은 언덕에서 다시 하기 ↻</button><button id="newMatch">새로운 경기 설정</button></dialog>
-<script src="engine.js"></script><script src="game.js"></script></body></html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f6f3e9"><meta name="description" content="도구 6종과 12개 장소에서 즐기는 로컬 2인 3D 모래 뺏기.">
+  <title>모래 뺏기 — Sand Digger</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='28'%3E⚑%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<header>
+  <a class="brand" href="./"><span class="brand-mark">⚑</span><span>모래 뺏기<small>SAND DIGGER</small></span></a>
+  <div class="header-note">새로운 장소, 새로운 깃발, 새로운 한 수.</div>
+  <nav><button id="help">게임 방법</button><button id="settings">새 경기</button></nav>
+</header>
+<main>
+  <section class="arena">
+    <div class="arena-top">
+      <span class="location"><b id="stageName">파도 해변</b><span id="stageTag">BEACH · LOCAL 2P</span></span>
+      <div class="view-tools"><button id="cut" aria-pressed="false">단면 보기</button><button id="zoomOut" aria-label="축소">−</button><button id="zoomIn" aria-label="확대">＋</button></div>
+    </div>
+    <canvas id="game" tabindex="0" aria-label="3D 모래 언덕. 좌클릭을 누르면 채굴하고, 놓으면 턴이 끝납니다. 우클릭 드래그로 시점을 회전합니다."></canvas>
+    <div class="turn-banner"><span id="turnLabel">플레이어 1의 차례</span><small id="instruction">좌클릭 유지: 채굴 · 우클릭 드래그: 회전</small></div>
+    <div class="arena-bottom"><span id="seedLabel"></span><span>좌클릭 유지: 채굴 · 우클릭: 회전<br>두 손가락: 회전 / 핀치 확대</span><button id="resetView">시점 초기화</button></div>
+    <div id="toast" role="status"></div>
+  </section>
+  <aside>
+    <div class="match-line"><span id="round">ROUND 01</span><strong id="clock">10:00</strong></div>
+    <div class="players">
+      <article id="p0" class="player active"><div><span class="player-dot">1</span><span>플레이어 1<small>선공</small></span><span class="active-label">YOUR TURN</span></div><strong><span id="score0">0.0</span><small> g</small></strong></article>
+      <article id="p1" class="player"><div><span class="player-dot">2</span><span>플레이어 2<small>후공</small></span><span class="active-label">YOUR TURN</span></div><strong><span id="score1">0.0</span><small> g</small></strong></article>
+    </div>
+    <section class="status-box">
+      <div><span>깃발 지지 상태</span><strong id="riskLabel">안정적</strong></div><div class="risk-track"><i id="riskBar"></i></div>
+      <div class="flag-card"><canvas id="flagPreview" width="128" height="96" aria-label="이번 경기의 원피스 해적기"></canvas><div><b id="flagName"></b><p id="flagSpec"></p><p id="flagDetail"></p></div></div>
+    </section>
+    <section class="toolbox">
+      <div class="section-label">이번 수의 도구 <span id="turnClock">45초</span></div>
+      <div class="tools">
+        <button data-tool="broom" aria-pressed="false"><img width="36" height="36" alt=""><span>빗자루</span><small>넓은 표면</small></button>
+        <button data-tool="finger" class="selected" aria-pressed="true"><img width="36" height="36" alt=""><span>손가락</span><small>좁은 굴</small></button>
+        <button data-tool="needle" aria-pressed="false"><img width="36" height="36" alt=""><span>바늘</span><small>정밀 제거</small></button>
+        <button data-tool="toothpick" aria-pressed="false"><img width="36" height="36" alt=""><span>이쑤시개</span><small>깊은 구멍</small></button>
+        <button data-tool="hand" aria-pressed="false"><img width="36" height="36" alt=""><span>한손</span><small>한 움큼</small></button>
+        <button data-tool="bothhands" aria-pressed="false"><img width="36" height="36" alt=""><span>양손</span><small>넓게 퍼내기</small></button>
+      </div>
+      <p id="toolHint"></p><div class="harvest-line"><span>이번 수의 수확</span><strong id="harvest">0.0 g</strong></div>
+    </section>
+    <button id="pass" class="primary">채굴 없이 턴 넘기기 <span>→</span></button>
+    <p class="rule-note">깃발을 쓰러뜨리면 수확량과 관계없이 패배!</p>
+    <div class="sound"><label><input id="music" type="checkbox" checked> 배경음악</label><label><input id="sfx" type="checkbox" checked> 효과음</label></div>
+    <div class="music-info"><span>♫ <span id="trackName"></span></span><label>음량 <input id="volume" type="range" min="0" max="100" value="30" aria-label="전체 음량"></label></div>
+    <label class="motion-option"><input id="motion" type="checkbox" checked> 배 위 화면 흔들림</label>
+    <small id="saveStatus" role="status">이 브라우저에 턴마다 자동 저장</small>
+  </aside>
+</main>
+<footer><span>12 PLACES · 6 TOOLS · ENDLESS RIVALRY</span><span>로컬 2인 · 같은 기기를 번갈아 사용하세요</span></footer>
+<dialog id="setup">
+  <form id="setupForm">
+    <span class="eyebrow">MAKE YOUR OWN MATCH</span><h1>이번엔 어디서 겨룰까요?</h1>
+    <p>시간을 직접 입력하세요. <b>0은 무제한</b>입니다.</p>
+    <div class="time-fields">
+      <div><label for="duration">전체 경기 시간</label><div class="number-unit"><input id="duration" type="number" min="0" max="86400" step="any" value="10" required inputmode="decimal"><select id="durationUnit" aria-label="경기 시간 단위"><option value="1">초</option><option value="60" selected>분</option><option value="3600">시간</option></select></div></div>
+      <div><label for="turnDuration">한 턴의 제한 시간</label><div class="number-unit"><input id="turnDuration" type="number" min="0" max="86400" step="any" value="45" required inputmode="decimal"><select id="turnUnit" aria-label="턴 시간 단위"><option value="1">초</option><option value="60">분</option><option value="3600">시간</option></select></div></div>
+    </div>
+    <p class="fine">최대 24시간 · 턴 시간이 끝나면 채굴을 종료하고 판정합니다.</p>
+    <label>경기 장소<select id="stageSelect"><option value="random">매 경기 무작위 · 12개 장소</option></select></label>
+    <label for="seedInput">모래 언덕 시드</label><div class="seed-row"><input id="seedInput" maxlength="32" value="SAND-0909" required><button id="randomSeed" type="button">새 시드</button></div>
+    <p class="fine">같은 시드로 같은 언덕을 만듭니다. 해적기와 막대의 재질·색상·굵기·길이·각도·매립 깊이는 새 경기마다 바뀝니다.</p>
+    <p class="fine">새 경기를 시작하면 현재 경기가 교체됩니다. 창을 숨기거나 설정을 열면 시간이 멈춥니다.</p>
+    <p id="setupError" role="alert"></p><button class="primary" type="submit">새 경기 시작 →</button><button id="resume" type="button">현재 경기로 돌아가기</button>
+  </form>
+</dialog>
+<dialog id="helpDialog">
+  <h2>누르고 파고, 놓고 넘기세요.</h2>
+  <ol><li><b>6개 도구 중 하나를 선택하세요.</b> 바늘부터 양손까지, 범위와 채굴 속도가 다릅니다.</li><li><b>좌클릭을 누르는 동안 계속 채굴합니다.</b> 마우스를 움직이지 않아도 파고듭니다. 놓거나 턴 제한 시간이 끝나면 이번 수가 끝납니다.</li><li><b>우클릭 드래그는 시점 회전입니다.</b> 빈 곳을 좌클릭해도 회전하지 않습니다. 모바일에서는 두 손가락으로 회전·확대하세요.</li><li><b>안정화 뒤 상대 차례로 넘어갑니다.</b> 실제로 쓰러진 깃발이 모래나 바닥에 닿으면 마지막 행동자가 패배합니다.</li></ol>
+  <p>경기 시간 종료 후 같은 수의 턴을 마치고 수확 무게로 비교합니다. 같으면 무승부입니다. 붕괴로 떨어진 모래는 점수를 주지 않습니다.</p>
+  <p>배경 12종에는 각기 다른 오리지널 음악이 적용됩니다. 음악은 화면을 한 번 누르면 시작합니다. 배의 흔들림은 화면 효과이며 물리 판정에 영향을 주지 않습니다.</p>
+  <p>깃발은 원피스 해적단 8종의 문양을 간략화해 표현합니다. 단면 보기는 양쪽 모두 사용할 수 있습니다.</p>
+  <button id="closeHelp" class="primary">알겠어요</button>
+</dialog>
+<dialog id="result"><span class="eyebrow">THE SAND HAS SETTLED</span><h1 id="resultTitle"></h1><p id="resultReason"></p><div id="resultScores"></div><button id="replay" class="primary">같은 언덕 · 새 깃발로 재경기 ↻</button><button id="newMatch">새로운 경기 설정</button></dialog>
+<script src="content.js?v=2"></script><script src="engine.js?v=2"></script><script src="world.js?v=2"></script><script src="audio.js?v=2"></script><script src="game.js?v=2"></script>
+</body></html>
