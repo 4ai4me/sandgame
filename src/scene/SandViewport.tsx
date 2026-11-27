@@ -18,6 +18,7 @@ import { ParticleSystem } from './particles';
 import { buildPileGeometry } from './pileMesh';
 import { createSedimentTextures, type SedimentTextures } from './textures';
 import { Tool3DVisual } from './tool3d';
+import { VictoryCelebration } from './victoryFx';
 
 export interface SandViewportHandle {
   rebuildPile: () => void;
@@ -28,6 +29,8 @@ export interface SandViewportHandle {
   spawnHarvest: (from: [number, number, number], player: 0 | 1, count: number) => void;
   spawnCollapse: (moves: CollapseMove[]) => void;
   spawnImpact: (origin: [number, number, number]) => void;
+  triggerVictory: (winner: 0 | 1 | null, isAiWinner: boolean) => void;
+  clearVictory: () => void;
   addTrauma: (amount: number) => void;
   clearParticles: () => void;
   setAiToolState: (
@@ -141,6 +144,9 @@ export const SandViewport: React.FC<SandViewportProps> = ({
     zoomBy: (mult: number) => void;
     resetView: () => void;
     particles: ParticleSystem | null;
+    victory: VictoryCelebration | null;
+    triggerVictory: (winner: 0 | 1 | null, isAiWinner: boolean) => void;
+    clearVictory: () => void;
     addTrauma: (n: number) => void;
     aiTool: { active: boolean; tool: ToolId; point: [number, number, number] | null; phase: number } | null;
   }>({
@@ -150,6 +156,9 @@ export const SandViewport: React.FC<SandViewportProps> = ({
     zoomBy: () => {},
     resetView: () => {},
     particles: null,
+    victory: null,
+    triggerVictory: () => {},
+    clearVictory: () => {},
     addTrauma: () => {},
     aiTool: null,
   });
@@ -172,6 +181,8 @@ export const SandViewport: React.FC<SandViewportProps> = ({
       const s = stateRef.current;
       internalRef.current.particles?.spawnImpactBurst(origin, material(s).color, factor(s));
     },
+    triggerVictory: (winner, isAiWinner) => internalRef.current.triggerVictory(winner, isAiWinner),
+    clearVictory: () => internalRef.current.clearVictory(),
     addTrauma: (amt) => internalRef.current.addTrauma(amt),
     clearParticles: () => internalRef.current.particles?.clearGrains(),
     setAiToolState: (v) => {
@@ -286,6 +297,9 @@ export const SandViewport: React.FC<SandViewportProps> = ({
     const particles = new ParticleSystem();
     worldGroup.add(particles.group);
 
+    const victory = new VictoryCelebration(maxAnisotropy);
+    worldGroup.add(victory.group);
+
     const toolVisual = new Tool3DVisual();
     worldGroup.add(toolVisual.group);
 
@@ -342,11 +356,28 @@ export const SandViewport: React.FC<SandViewportProps> = ({
     let curPitch = targetPitch;
     let curDist = targetDist;
     let curRoll = 0;
+    let curTargetX = 0;
+    let curTargetY = 4.4;
+    let curTargetZ = 0;
     let trauma = 0;
 
     internalRef.current.rebuildPile = rebuildPile;
     internalRef.current.syncScene = syncScene;
     internalRef.current.particles = particles;
+    internalRef.current.victory = victory;
+    internalRef.current.triggerVictory = (winner, isAiWinner) => {
+      const s = stateRef.current;
+      const f = factor(s);
+      victory.trigger(winner, isAiWinner, f);
+      // Frame the winner's camp heroically from the front-angle opposite the result card
+      targetYaw = winner === 0 ? -0.32 : winner === 1 ? 0.32 : -0.18;
+      targetPitch = 0.42;
+      targetDist = 37;
+      trauma = Math.min(1, trauma + 0.38);
+    };
+    internalRef.current.clearVictory = () => {
+      victory.clear();
+    };
     internalRef.current.addTrauma = (amt: number) => {
       trauma = Math.min(1, trauma + amt);
     };
@@ -430,6 +461,17 @@ export const SandViewport: React.FC<SandViewportProps> = ({
 
     const onPointerDown = (e: PointerEvent) => {
       propsRef.current.onUserInteract();
+      if (propsRef.current.screen === 'gameover') {
+        if (pointers.size > 0 || drag) return;
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch {
+          // Ignore synthetic pointer events
+        }
+        drag = { mode: 'rotate', id: e.pointerId, x: e.clientX, y: e.clientY };
+        return;
+      }
       if (propsRef.current.screen !== 'playing') return;
       const p = propsRef.current.phase;
       if (p === 'settle' || p === 'ai-thinking' || p === 'ai-dig' || stateRef.current.result) return;
@@ -500,7 +542,10 @@ export const SandViewport: React.FC<SandViewportProps> = ({
           propsRef.current.onDigEnd();
           return;
         }
-        if (drag?.mode === 'rotate' && !(e.buttons & 2)) {
+        if (
+          drag?.mode === 'rotate' &&
+          (propsRef.current.screen === 'gameover' ? !(e.buttons & 3) : !(e.buttons & 2))
+        ) {
           drag = null;
           pointers.clear();
           return;
@@ -562,7 +607,14 @@ export const SandViewport: React.FC<SandViewportProps> = ({
         drag.nextDigAt = performance.now() + TOOLS[propsRef.current.tool].interval;
         return;
       }
-      if (e.pointerType !== 'touch' && drag?.mode === 'rotate' && e.button !== 2) return;
+      if (
+        e.pointerType !== 'touch' &&
+        drag?.mode === 'rotate' &&
+        propsRef.current.screen !== 'gameover' &&
+        e.button !== 2
+      ) {
+        return;
+      }
 
       pointers.delete(e.pointerId);
       if (drag?.mode === 'dig') {
@@ -707,11 +759,14 @@ export const SandViewport: React.FC<SandViewportProps> = ({
         }
       }
 
-      // Scenic slow orbit on Title screen
+      // Scenic slow orbit on Title screen, or celebratory hero orbit on Game Over
       if (p.screen === 'title' && !reducedMotion) {
         targetYaw += dt * 0.18;
         targetPitch = 0.52 + Math.sin(sceneElapsed * 0.35) * 0.05;
         targetDist = 36;
+      } else if (p.screen === 'gameover' && victory.isActive() && !reducedMotion) {
+        targetYaw += dt * 0.14;
+        targetPitch = 0.4 + Math.sin(sceneElapsed * 0.5) * 0.04;
       }
 
       // Exponential camera damping
@@ -750,7 +805,21 @@ export const SandViewport: React.FC<SandViewportProps> = ({
       const shakeX = shake * Math.sin(sceneElapsed * 43);
       const shakeY = shake * Math.cos(sceneElapsed * 37);
 
-      _target.set(0, (s.playMode === 'tabletop' ? 5.2 : 4.4) * f, 0);
+      // Smoothly pan camera target toward winning camp when victory celebration is active
+      let desiredTargetX = 0;
+      let desiredTargetY = (s.playMode === 'tabletop' ? 5.2 : 4.4) * f;
+      let desiredTargetZ = 0;
+      if (p.screen === 'gameover' && victory.isActive()) {
+        const anchor = victory.getAnchorPosition();
+        desiredTargetX = anchor.x * 0.55;
+        desiredTargetY = 6.2 * f;
+        desiredTargetZ = anchor.z * 0.45;
+      }
+      curTargetX = THREE.MathUtils.damp(curTargetX, desiredTargetX, dampLambda, dt);
+      curTargetY = THREE.MathUtils.damp(curTargetY, desiredTargetY, dampLambda, dt);
+      curTargetZ = THREE.MathUtils.damp(curTargetZ, desiredTargetZ, dampLambda, dt);
+
+      _target.set(curTargetX, curTargetY, curTargetZ);
       const horiz = Math.cos(curPitch) * scaledDist;
       camera.position.set(
         _target.x + Math.sin(curYaw) * horiz + shakeX,
@@ -813,11 +882,12 @@ export const SandViewport: React.FC<SandViewportProps> = ({
       worldGroup.rotation.z = Math.sin(sceneElapsed * 0.72) * 0.028 * motionStrength;
       worldGroup.position.y = Math.sin(sceneElapsed * 1.05) * 0.25 * motionStrength;
 
-      // Update animated water, flag cloth, particles, and 3D tool visual
+      // Update animated water, flag cloth, particles, victory celebration, and 3D tool visual
       diorama.updateWater(sceneElapsed);
       const supRatio = support(s).ratio;
       flagAssembly.update(s.flag, env, sceneElapsed, supRatio, reducedMotion);
       particles.update(dt, sceneElapsed, env, reducedMotion);
+      victory.update(dt, sceneElapsed, reducedMotion);
 
       const aiVis = internalRef.current.aiTool;
       if (aiVis?.active && aiVis.point) {
@@ -889,6 +959,7 @@ export const SandViewport: React.FC<SandViewportProps> = ({
       diorama.dispose();
       flagAssembly.dispose();
       particles.dispose();
+      victory.dispose();
       toolVisual.dispose();
       pileMesh.geometry.dispose();
       pileMat.dispose();

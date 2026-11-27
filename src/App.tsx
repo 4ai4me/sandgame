@@ -300,6 +300,7 @@ export default function App() {
         setPhase('observe');
         setScreen('gameover');
         setHasSavedMatch(false);
+        viewportRef.current?.triggerVictory(s.result.winner, s.playMode === 'ai' && s.result.winner === 1);
         audioRef.current.playVictory();
       } else {
         phaseRef.current = 'observe';
@@ -468,6 +469,10 @@ export default function App() {
             s.result = weightResult(s);
             setScreen('gameover');
             setHasSavedMatch(false);
+            viewportRef.current?.triggerVictory(
+              s.result.winner,
+              s.playMode === 'ai' && s.result.winner === 1,
+            );
             audioRef.current.playVictory();
             syncHudNow();
             return;
@@ -645,6 +650,7 @@ export default function App() {
       setScreen('playing');
       syncTrack(nextState);
       viewportRef.current?.clearParticles();
+      viewportRef.current?.clearVictory();
       viewportRef.current?.setAiToolState(null);
       viewportRef.current?.syncScene();
       viewportRef.current?.resetView();
@@ -948,6 +954,7 @@ export default function App() {
           onRestartSameHill={handleRestartSameHill}
           onReturnTitle={() => {
             setActiveModal('none');
+            viewportRef.current?.clearVictory();
             setScreen('title');
           }}
         />
@@ -961,6 +968,7 @@ export default function App() {
           onOpenSettings={() => setActiveModal('setup')}
           onReturnTitle={() => {
             setActiveModal('none');
+            viewportRef.current?.clearVictory();
             setScreen('title');
           }}
         />

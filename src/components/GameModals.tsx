@@ -481,6 +481,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   onOpenSettings,
   onReturnTitle,
 }) => {
+  const [minimized, setMinimized] = useState(false);
   const res = state.result;
   if (!res) return null;
 
@@ -499,31 +500,87 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         ? `${res.actor === 0 ? '플레이어 1' : p2Label}의 차례에 깃발이 쓰러졌습니다.`
         : '시간이 종료되어 총 수확 무게로 승패를 가렸습니다.';
 
+  // Dock card on opposite side of the winner's 3D victory flagpole so the celebration shines unobstructed!
+  const alignClass =
+    res.winner === 1
+      ? 'items-end sm:items-center justify-center sm:justify-start'
+      : 'items-end sm:items-center justify-center sm:justify-end';
+
+  if (minimized) {
+    return (
+      <div className="fixed inset-x-0 bottom-5 z-40 pointer-events-none flex justify-center px-4">
+        <div className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-[#fbf8ef]/95 border border-[#d6cdb8] shadow-xl px-4 py-2.5">
+          <span className="font-display font-bold text-sm text-[#19322c]">{title}</span>
+          <button
+            type="button"
+            onClick={() => setMinimized(false)}
+            className="px-3 py-1.5 rounded-lg bg-[#255c4a] hover:bg-[#1e4d3e] text-[#fbf8ef] text-xs font-bold"
+          >
+            결과 카드 열기
+          </button>
+          <button
+            type="button"
+            data-start="true"
+            onClick={onReplaySameHill}
+            className="px-3 py-1.5 rounded-lg bg-[#efe9da] hover:bg-[#e5ddc9] text-[#223d35] text-xs font-semibold"
+          >
+            재경기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#0f211c]/70 p-4">
+    <div
+      className={`fixed inset-0 z-40 pointer-events-none flex p-4 sm:p-8 lg:p-12 ${alignClass}`}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="경기 결과"
-        className="w-full max-w-md rounded-2xl bg-[#fbf8ef] border border-[#d6cdb8] shadow-2xl p-6 text-center"
+        className="pointer-events-auto w-full max-w-[390px] rounded-2xl bg-[#fbf8ef]/95 border border-[#d6cdb8] shadow-[0_24px_64px_rgba(14,32,27,0.34)] p-5 sm:p-6 text-center"
       >
-        <p className="text-xs font-semibold text-[#6b7b72] tracking-wider mb-1">MATCH COMPLETE</p>
-        <h2 className="font-display text-3xl font-extrabold text-[#19322c] mb-2">{title}</h2>
-        <p className="text-sm text-[#586b62] mb-5">{reasonText}</p>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] font-bold text-[#6b7b72] tracking-wider">MATCH COMPLETE</span>
+          <button
+            type="button"
+            onClick={() => setMinimized(true)}
+            className="text-[11px] font-semibold text-[#255c4a] hover:underline"
+          >
+            3D 연출 크게 보기
+          </button>
+        </div>
+        <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#19322c] mb-1.5 text-left">
+          {title}
+        </h2>
+        <p className="text-xs sm:text-sm text-[#586b62] mb-4 text-left">{reasonText}</p>
 
         {/* Mastery Stat Tiles */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <div className="rounded-xl bg-[#e4f1eb] border border-[#b9d7ca] p-3">
+        <div className="grid grid-cols-2 gap-2.5 mb-4">
+          <div
+            className={`rounded-xl border p-3 ${
+              res.winner === 0
+                ? 'bg-[#dcf0e6] border-[#256b52] ring-2 ring-[#256b52]/25'
+                : 'bg-[#e4f1eb]/75 border-[#b9d7ca]'
+            }`}
+          >
             <span className="block text-xs font-semibold text-[#2a5c4a]">플레이어 1</span>
-            <strong className="block font-mono-num text-2xl font-bold text-[#15352a] mt-1">
+            <strong className="block font-mono-num text-xl sm:text-2xl font-bold text-[#15352a] mt-0.5">
               {formatGrams(grams(state, state.scores[0]))}
               <small className="text-xs font-medium ml-0.5">g</small>
             </strong>
             <span className="block text-[11px] text-[#4c6e60] mt-0.5">{state.turns[0]}턴</span>
           </div>
-          <div className="rounded-xl bg-[#f7e7e0] border border-[#e3c0b3] p-3">
+          <div
+            className={`rounded-xl border p-3 ${
+              res.winner === 1
+                ? 'bg-[#fae1d7] border-[#c25233] ring-2 ring-[#c25233]/25'
+                : 'bg-[#f7e7e0]/75 border-[#e3c0b3]'
+            }`}
+          >
             <span className="block text-xs font-semibold text-[#8c3f29]">{p2Label}</span>
-            <strong className="block font-mono-num text-2xl font-bold text-[#3f1c12] mt-1">
+            <strong className="block font-mono-num text-xl sm:text-2xl font-bold text-[#3f1c12] mt-0.5">
               {formatGrams(grams(state, state.scores[1]))}
               <small className="text-xs font-medium ml-0.5">g</small>
             </strong>
@@ -550,7 +607,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           <button
             type="button"
             onClick={onReturnTitle}
-            className="w-full py-2 rounded-xl text-[#5a6c63] hover:text-[#1b332d] font-medium text-xs"
+            className="w-full py-1.5 rounded-xl text-[#5a6c63] hover:text-[#1b332d] font-medium text-xs"
           >
             타이틀 화면으로
           </button>
