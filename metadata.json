@@ -1,0 +1,6 @@
+{
+  "name": "모래 뺏기 — Sand Digger 3D",
+  "description": "Three.js 3D 그래픽, 12개 스테이지, 8종 퇴적물 물리, AI 대전, 단말기 1대 마주보기 테이블탑 모드를 지원하는 3D 모래 뺏기 게임.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
