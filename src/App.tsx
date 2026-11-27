@@ -176,7 +176,7 @@ export default function App() {
   const [titleMode, setTitleMode] = useState<PlayMode>('tabletop');
   const [titleAiDiff, setTitleAiDiff] = useState<AiDifficulty>('normal');
   const [titleStage, setTitleStage] = useState<StageId | 'random'>('beach');
-  const [titleSediment, setTitleSediment] = useState<SedimentId>('sand');
+  const [titleSediment, setTitleSediment] = useState<SedimentId | 'random'>('sand');
   const [hasSavedMatch, setHasSavedMatch] = useState<boolean>(
     Boolean(initialSavedRef.current.state && !initialSavedRef.current.state.result),
   );
@@ -695,7 +695,7 @@ export default function App() {
   );
 
   const handleTitleSedimentPreview = useCallback(
-    (sed: SedimentId) => {
+    (sed: SedimentId | 'random') => {
       setTitleSediment(sed);
       if (screenRef.current === 'title') {
         const preview = create(stateRef.current.seed, 0, 0, {

@@ -200,11 +200,11 @@ export interface CreateOptions {
   stage?: StageId | 'random';
   previousDesign?: FlagDesignId;
   pilePercent?: number;
-  sediment?: SedimentId;
+  sediment?: SedimentId | 'random';
   materialPhysics?: boolean;
-  time?: TimeMode;
-  season?: SeasonMode;
-  weather?: WeatherMode;
+  time?: TimeMode | 'random';
+  season?: SeasonMode | 'random';
+  weather?: WeatherMode | 'random';
   playMode?: PlayMode;
   aiDifficulty?: AiDifficulty;
 }

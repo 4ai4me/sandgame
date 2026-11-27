@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { Shuffle, X } from 'lucide-react';
 import { FLAGS, POLE_MATERIALS, SEDIMENTS, STAGES, TOOLS, TRACKS } from '../game/content';
 import { factor, formatGrams, grams, seconds } from '../game/engine';
 import type {
@@ -109,12 +109,12 @@ export interface SetupFormValues {
   duration: number;
   turnDuration: number;
   stage: StageId | 'random';
-  sediment: SedimentId;
+  sediment: SedimentId | 'random';
   pilePercent: number;
   materialPhysics: boolean;
-  time: TimeMode;
-  season: SeasonMode;
-  weather: WeatherMode;
+  time: TimeMode | 'random';
+  season: SeasonMode | 'random';
+  weather: WeatherMode | 'random';
   playMode: PlayMode;
   aiDifficulty: AiDifficulty;
 }
@@ -132,12 +132,12 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
   const [turnVal, setTurnVal] = useState(String(state.turnDuration));
   const [turnUnit, setTurnUnit] = useState('1');
   const [stage, setStage] = useState<StageId | 'random'>(state.stage);
-  const [sediment, setSediment] = useState<SedimentId>(state.sediment);
+  const [sediment, setSediment] = useState<SedimentId | 'random'>(state.sediment);
   const [pilePercent, setPilePercent] = useState(String(state.pilePercent));
   const [materialPhysics, setMaterialPhysics] = useState(state.materialPhysics !== false);
-  const [time, setTime] = useState<TimeMode>(state.environment.time);
-  const [season, setSeason] = useState<SeasonMode>(state.environment.season);
-  const [weather, setWeather] = useState<WeatherMode>(state.environment.weather);
+  const [time, setTime] = useState<TimeMode | 'random'>(state.environment.time);
+  const [season, setSeason] = useState<SeasonMode | 'random'>(state.environment.season);
+  const [weather, setWeather] = useState<WeatherMode | 'random'>(state.environment.weather);
   const [playMode, setPlayMode] = useState<PlayMode>(state.playMode);
   const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>(state.aiDifficulty);
   const [error, setError] = useState('');
@@ -145,6 +145,21 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
   const handleRandomSeed = () => {
     const rand = Math.random().toString(36).slice(2, 10).toUpperCase();
     setSeed(`SAND-${rand}`);
+  };
+
+  const handleRandomizeAll = () => {
+    const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const rand = Math.random().toString(36).slice(2, 10).toUpperCase();
+    setSeed(`SAND-${rand}`);
+    setStage(pick(STAGES).id);
+    setSediment(pick(SEDIMENTS).id);
+    // Fun balanced scale range (70% ~ 220% in 10% increments)
+    const randPercent = 70 + Math.floor(Math.random() * 16) * 10;
+    setPilePercent(String(randPercent));
+    setTime(pick(['cycle', 'day', 'night'] as const));
+    setSeason(pick(['cycle', 'spring', 'summer', 'autumn', 'winter'] as const));
+    setWeather(pick(['auto', 'clear', 'rain', 'snow', 'wind'] as const));
+    setError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -188,16 +203,27 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
         aria-label="새 경기 설정"
         className="w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-[#fbf8ef] border border-[#d6cdb8] shadow-2xl p-5 sm:p-6"
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <h2 className="font-display text-xl font-bold text-[#1a332d]">새 경기 설정</h2>
-          <button
-            type="button"
-            aria-label="설정 닫기"
-            onClick={onClose}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-[#556860] hover:bg-[#ebe4d3]"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              data-testid="setup-randomize-btn"
+              onClick={handleRandomizeAll}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e4f1eb] hover:bg-[#d4e8de] border border-[#b2d3c4] text-xs font-bold text-[#194a3a] transition-colors"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+              <span>전체 랜덤</span>
+            </button>
+            <button
+              type="button"
+              aria-label="설정 닫기"
+              onClick={onClose}
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-[#556860] hover:bg-[#ebe4d3]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -251,10 +277,12 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
             <label className="block">
               <span className="block text-xs font-semibold text-[#475d54] mb-1">모래·흙 재질 (8종)</span>
               <select
+                aria-label="모래·흙 재질"
                 value={sediment}
-                onChange={(e) => setSediment(e.target.value as SedimentId)}
+                onChange={(e) => setSediment(e.target.value as SedimentId | 'random')}
                 className="w-full rounded-lg bg-[#fffdf7] border border-[#cfc6b0] px-3 py-2 text-sm text-[#1e352f]"
               >
+                <option value="random">랜덤 (8종)</option>
                 {SEDIMENTS.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} (밀도 {m.density}x)
@@ -296,10 +324,12 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
             <label className="block">
               <span className="block text-[11px] font-semibold text-[#475d54] mb-1">낮과 밤</span>
               <select
+                aria-label="낮과 밤"
                 value={time}
-                onChange={(e) => setTime(e.target.value as TimeMode)}
+                onChange={(e) => setTime(e.target.value as TimeMode | 'random')}
                 className="w-full rounded-lg bg-[#fffdf7] border border-[#cfc6b0] px-2 py-2 text-xs text-[#1e352f]"
               >
+                <option value="random">랜덤</option>
                 <option value="cycle">2분 순환</option>
                 <option value="day">낮 고정</option>
                 <option value="night">밤 고정</option>
@@ -308,10 +338,12 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
             <label className="block">
               <span className="block text-[11px] font-semibold text-[#475d54] mb-1">계절</span>
               <select
+                aria-label="계절"
                 value={season}
-                onChange={(e) => setSeason(e.target.value as SeasonMode)}
+                onChange={(e) => setSeason(e.target.value as SeasonMode | 'random')}
                 className="w-full rounded-lg bg-[#fffdf7] border border-[#cfc6b0] px-2 py-2 text-xs text-[#1e352f]"
               >
+                <option value="random">랜덤</option>
                 <option value="cycle">3분 순환</option>
                 <option value="spring">봄</option>
                 <option value="summer">여름</option>
@@ -322,10 +354,12 @@ export const SetupModal: React.FC<SetupModalProps> = ({ state, onSubmit, onClose
             <label className="block">
               <span className="block text-[11px] font-semibold text-[#475d54] mb-1">날씨</span>
               <select
+                aria-label="날씨"
                 value={weather}
-                onChange={(e) => setWeather(e.target.value as WeatherMode)}
+                onChange={(e) => setWeather(e.target.value as WeatherMode | 'random')}
                 className="w-full rounded-lg bg-[#fffdf7] border border-[#cfc6b0] px-2 py-2 text-xs text-[#1e352f]"
               >
+                <option value="random">랜덤</option>
                 <option value="auto">자동 변화</option>
                 <option value="clear">맑음</option>
                 <option value="rain">비</option>

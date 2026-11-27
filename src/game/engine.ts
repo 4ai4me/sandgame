@@ -7,10 +7,14 @@ import type {
   FlagPlan,
   MatchResult,
   MatchState,
+  SeasonMode,
+  SedimentId,
   SedimentSpec,
   SettleResult,
   SupportInfo,
+  TimeMode,
   ToolId,
+  WeatherMode,
 } from './types';
 
 export const N = 25;
@@ -205,20 +209,31 @@ export function create(
     throw new Error('알 수 없는 장소입니다.');
   }
   const percent = options.pilePercent ?? 100;
-  const sediment = options.sediment ?? 'sand';
+  const rawSediment = options.sediment ?? 'sand';
   if (options.materialPhysics !== undefined && typeof options.materialPhysics !== 'boolean') {
     throw new Error('재질 물리 설정이 올바르지 않습니다.');
   }
-  if (!Number.isInteger(percent) || !valid(percent, 50, 1700) || !SEDIMENTS.some((m) => m.id === sediment)) {
+  if (
+    !Number.isInteger(percent) ||
+    !valid(percent, 50, 1700) ||
+    (rawSediment !== 'random' && !SEDIMENTS.some((m) => m.id === rawSediment))
+  ) {
     throw new Error('더미 규모는 50~1700의 정수, 재질은 목록에서 선택하세요.');
   }
-  const env: EnvironmentConfig = {
-    elapsed: 0,
-    time: options.time ?? 'cycle',
-    season: options.season ?? 'cycle',
-    weather: options.weather ?? 'auto',
-  };
-  checkEnvironment(env);
+
+  const timeChoices: TimeMode[] = ['cycle', 'day', 'night'];
+  const seasonChoices: SeasonMode[] = ['cycle', 'spring', 'summer', 'autumn', 'winter'];
+  const weatherChoices: WeatherMode[] = ['auto', 'clear', 'rain', 'snow', 'wind'];
+  const rawTime = options.time ?? 'cycle';
+  const rawSeason = options.season ?? 'cycle';
+  const rawWeather = options.weather ?? 'auto';
+  if (
+    (rawTime !== 'random' && !timeChoices.includes(rawTime)) ||
+    (rawSeason !== 'random' && !seasonChoices.includes(rawSeason)) ||
+    (rawWeather !== 'random' && !weatherChoices.includes(rawWeather))
+  ) {
+    throw new Error('시간·계절·날씨 설정이 올바르지 않습니다.');
+  }
 
   const random = rng(seed);
   const g = new Uint8Array(SIZE);
@@ -237,6 +252,16 @@ export function create(
   const pick = <T,>(arr: T[]): T => arr[Math.floor(roll() * arr.length)];
   const stage =
     options.stage && options.stage !== 'random' ? options.stage : pick(STAGES).id;
+  const sediment: SedimentId =
+    rawSediment === 'random' ? pick(SEDIMENTS).id : rawSediment;
+  const env: EnvironmentConfig = {
+    elapsed: 0,
+    time: rawTime === 'random' ? pick(timeChoices) : rawTime,
+    season: rawSeason === 'random' ? pick(seasonChoices) : rawSeason,
+    weather: rawWeather === 'random' ? pick(weatherChoices) : rawWeather,
+  };
+  checkEnvironment(env);
+
   const poleMat = pick(POLE_MATERIALS);
   const flagPool = FLAGS.filter((f) => f.id !== options.previousDesign);
   const design = pick(flagPool.length ? flagPool : FLAGS).id;

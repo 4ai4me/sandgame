@@ -7,12 +7,12 @@ interface TitleOverlayProps {
   playMode: PlayMode;
   aiDifficulty: AiDifficulty;
   stage: StageId | 'random';
-  sediment: SedimentId;
+  sediment: SedimentId | 'random';
   hasSavedMatch: boolean;
   onChangeMode: (mode: PlayMode) => void;
   onChangeAiDifficulty: (diff: AiDifficulty) => void;
   onChangeStage: (stage: StageId | 'random') => void;
-  onChangeSediment: (sediment: SedimentId) => void;
+  onChangeSediment: (sediment: SedimentId | 'random') => void;
   onStartNew: () => void;
   onContinueSaved: () => void;
 }
@@ -136,9 +136,10 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
             <select
               aria-label="모래 재질 선택"
               value={sediment}
-              onChange={(e) => onChangeSediment(e.target.value as SedimentId)}
+              onChange={(e) => onChangeSediment(e.target.value as SedimentId | 'random')}
               className="w-full rounded-lg bg-[#fffdf7] border border-[#cfc6b0] px-2.5 py-2 text-xs font-medium text-[#1e352f] focus:outline-none focus:border-[#2c6e58]"
             >
+              <option value="random">랜덤 (8종)</option>
               {SEDIMENTS.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}

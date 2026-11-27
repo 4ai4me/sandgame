@@ -157,3 +157,33 @@ test('AI chooses valid deterministic moves across difficulties', () => {
     assert.ok(taken > 0, `AI (${diff}) target point must carve real sand`);
   }
 });
+
+test('random setup options resolve deterministically and roundtrip via encode/decode', () => {
+  const a = create('RAND-SETUP-1', 600, 45, {
+    stage: 'random',
+    sediment: 'random',
+    time: 'random',
+    season: 'random',
+    weather: 'random',
+  });
+  const b = create('RAND-SETUP-1', 600, 45, {
+    stage: 'random',
+    sediment: 'random',
+    time: 'random',
+    season: 'random',
+    weather: 'random',
+  });
+  assert.equal(a.stage, b.stage);
+  assert.equal(a.sediment, b.sediment);
+  assert.deepEqual(a.environment, b.environment);
+  assert.notEqual(a.sediment as string, 'random');
+  assert.notEqual(a.environment.time as string, 'random');
+  assert.notEqual(a.environment.season as string, 'random');
+  assert.notEqual(a.environment.weather as string, 'random');
+
+  const restored = decode(encode(a));
+  assert.equal(restored.stage, a.stage);
+  assert.equal(restored.sediment, a.sediment);
+  assert.deepEqual(restored.environment, a.environment);
+});
+
